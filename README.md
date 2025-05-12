@@ -22,11 +22,27 @@
 
 phpMyAdmin: http://localhost:8080/
 
+Аутентификация пользователя и получение JWT-токена.
+
+URL: /api/login
+
+Метод: POST
+
+Параметры запроса:(Не требует проверки пользователя, а выдает токен для работы с API.)
+
+Пример запроса: POST http://localhost/api/login
+
+{
+  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpYXQiOjE3NDcwMzMzNTYsImV4cCI6MTc0NzAzNjk1Niwicm9sZXMiOlsiUk9MRV9BUEkiXSwidXNlcm5hbWUiOiJhcGlfdXNlciJ9.MQ9p-GEy3ji0wQ5-8hkA_PZbDSrl57n2L17j9-CQx9r3-q-uuKb3zA4pV2-Nfw2CIekm0U9y4iesZmj8Ds4yX059sVCSR7hwcgZHL725yIsMH0IVF90Z60rCQOZQpNTKrCJfJZbiaXcbMKj3So0_FZSQyPD-_E1Vmh8laZF-Of5qjlCgYnX1-ju4UvYj1lJLyTdOflxaZekTkMwm6yvUPnQdianVOEVpJMnGx8J-P7X7SLhkVXfQwmT8jELgwsoDplwa88CGyF-EZwAV4VudyjAlwQ7CGAoCoWQeXajoE6c8JdaeKNb9sPu4vaE4nR4JUVe0d4KL15DmbyWeR72vLA"
+}
+
 Получение списка тендеров с пагинацией и фильтрацией
 
 URL: /api/rest/tenders/
 
 Метод: GET
+
+Authorization: Bearer TEST-2151*********762-03031*********750b665b7*********4dac477-1*********'
 
 Параметры запроса:
 
@@ -81,6 +97,8 @@ URL: /api/rest/tenders/{id}
 
 Метод: GET
 
+Authorization: Bearer TEST-2151*********762-03031*********750b665b7*********4dac477-1*********'
+
 Параметры пути:
 
 id	(integer)	обязательный -	ID тендера
@@ -102,6 +120,8 @@ id	(integer)	обязательный -	ID тендера
 URL: /api/rest/tenders/
 
 Метод: POST
+
+Authorization: Bearer TEST-2151*********762-03031*********750b665b7*********4dac477-1*********'
 
 Тело запроса:
 

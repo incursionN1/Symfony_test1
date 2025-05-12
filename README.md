@@ -10,9 +10,11 @@
 
 5. Вернитесь в папку с проектом: cd .. . Запустите контейнеры: docker-compose up -d.
 
-6. Для запуска миграции используйте команду docker-compose exec app php bin/console doctrine:migrations:migrate.
+6. Создайте БД с именем «test».
 
-7. Для заполнения тестовыми данными используйте docker-compose exec app php bin/console ImportCsvTenders.
+7. Для запуска миграции используйте команду docker-compose exec app php bin/console doctrine:migrations:migrate.
+
+8. Для заполнения тестовыми данными используйте docker-compose exec app php bin/console ImportCsvTenders.
 
 Документация
 

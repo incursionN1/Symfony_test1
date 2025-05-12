@@ -20,7 +20,8 @@
 
 phpMyAdmin: http://localhost:8080/
 
-1. Получение списка тендеров с пагинацией и фильтрацией
+Получение списка тендеров с пагинацией и фильтрацией
+
 URL: /api/rest/tenders/
 
 Метод: GET
@@ -38,6 +39,7 @@ date_from	(string)      Необязательный   - Начальная да
 date_to	    (string)	  Необязательный   - Конечная дата для фильтрации по дате обновления (формат: dd.mm.YYYY HH:MM:SS)
 
 Пример запроса: GET http://localhost/api/rest/tenders/?page=1&limit=2&name=Годовой&date_from=13.08.2022 19:27:12&date_to=15.08.2022 19:22:00
+
 
 {
     "items": [
@@ -78,8 +80,11 @@ URL: /api/rest/tenders/{id}
 Метод: GET
 
 Параметры пути:
+
 id	(integer)	обязательный -	ID тендера
+
 Пример запроса: GET http://localhost/api/rest/tenders/5431
+
 {
     "id": 54,
     "external_code": "152466838",
@@ -91,9 +96,13 @@ id	(integer)	обязательный -	ID тендера
     }
 }
 Создание нового тендера
+
 URL: /api/rest/tenders/
+
 Метод: POST
+
 Тело запроса:
+
 external_code  (string)	  обязательный	Внешний код тендера	
 
 number	       (string)	  обязательный	Номер тендера	

@@ -5,6 +5,8 @@ namespace App\Controller;
 use App\Entity\Status;
 use App\Entity\Tenders;
 use App\Repository\TendersRepository;
+use App\Service\CommonFunctionsService;
+use App\Service\TenderService;
 use DateTime;
 use Doctrine\ORM\EntityManagerInterface;
 use Knp\Component\Pager\PaginatorInterface;
@@ -20,112 +22,80 @@ use Throwable;
 
 final class ApiRestTendersController extends AbstractController
 {
-    #[Route('/api/rest/tenders', name: 'app_api_rest_tenders_get_all', methods: ['GET'],)]
-    public function getAllTenders(TendersRepository $tendersRepository, SerializerInterface $serializer, Request $request,PaginatorInterface $paginator): JsonResponse
+    public function __construct(
+        private TenderService                   $tenderService,
+        private SerializerInterface             $serializer,
+        private readonly CommonFunctionsService $commonFunction,
+
+    ) {}
+
+    #[Route('/api/rest/tenders', name: 'app_api_rest_tenders_get_all', methods: ['GET'])]
+    public function getAllTenders(Request $request): JsonResponse
     {
         try {
             $page = $request->query->getInt('page', 1);
             $limit = $request->query->getInt('limit', 10);
-            if (!is_int($page) || $page < 1) {
-                throw new BadRequestHttpException('Invalid page. Страница должны быть числом больше 0 ');
+
+            if ($page < 1 || $limit < 1) {
+                throw new BadRequestHttpException('Page and limit must be greater than 0');
             }
-            if (!is_int($limit) || $limit < 1) {
-                throw new BadRequestHttpException('Invalid limit. Страница должны быть числом больше 0 ');
-            }
-            $query = $tendersRepository->createQueryBuilder('t');
-            if ($nameFilter = $request->query->get('name')) {
-                if (!is_string($nameFilter)) {
-                    throw new BadRequestHttpException('Invalid name. Название тендера должно быть строкой');
-                }
-                $query->andWhere('t.name LIKE :name')
-                    ->setParameter('name', '%' . $nameFilter . '%');
-            }
-            if ($dateFromFilter = $request->query->get('date_from')) {
-                $dateFrom = DateTime::createFromFormat('d.m.Y H:i:s', $dateFromFilter);
-                if (!$dateFrom) {
-                    throw new BadRequestHttpException('Invalid date_from format. Ожидаемый формат: d.m.Y H:i:s');
-                }
-                $query->andWhere('t.date_update >= :date_from')
-                    ->setParameter('date_from', $dateFrom);
-            }
-            if ($dateToFilter = $request->query->get('date_to')) {
-                $dateTo = DateTime::createFromFormat('d.m.Y H:i:s', $dateToFilter);
-                if (!$dateTo) {
-                    throw new BadRequestHttpException('Invalid date_to format. Ожидаемый формат: d.m.Y H:i:s');
-                }
-                $query->andWhere('t.date_update <= :date_to')
-                    ->setParameter('date_to', $dateTo);
-            }
-            $pagination = $paginator->paginate(
-                $query->getQuery(),
-                $page,
-                $limit
-            );
-            $data = [
-                'items' => $pagination->getItems(),
-                'pagination' => [
-                    'current_page' => $pagination->getCurrentPageNumber(),
-                    'total_pages' => (int) ceil($pagination->getTotalItemCount() / $limit),
-                    'total_items' => $pagination->getTotalItemCount(),
-                    'items_per_page' => $limit,
-                ]
+
+            $filters = [
+                'name' => $request->query->get('name'),
+                'date_from' => $request->query->get('date_from'),
+                'date_to' => $request->query->get('date_to'),
             ];
-            $data = $serializer->serialize($data, 'json');
-            return new JsonResponse($data, Response::HTTP_OK, [], true);
 
+            $result = $this->tenderService->getAllTenders($filters, $page, $limit);
+            $data = $this->serializer->serialize($result, 'json');
+
+            return $this->createJsonResponse($result,);
         } catch (BadRequestHttpException $e) {
-            return new JsonResponse(
-                ['error' => $e->getMessage()],
-                Response::HTTP_BAD_REQUEST
-            );
+            return $this->commonFunction->handleError($e->getMessage(), Response::HTTP_BAD_REQUEST);
         } catch (Throwable $e) {
-            return new JsonResponse(
-                ['error' => 'Internal server error'],
-                Response::HTTP_INTERNAL_SERVER_ERROR
-            );
+            return $this->commonFunction->handleError($e->getMessage());
         }
     }
-    #[Route('/api/rest/tenders/{id}', name: 'app_api_rest_tenders_get', requirements: ['id' => '\d+'], methods: ['GET'],)]
-    public function getTenders(TendersRepository $tendersRepository, SerializerInterface $serializer,$id): JsonResponse
-    {
-        $data = $serializer->serialize( $tendersRepository->find($id), 'json', ['groups' => 'tender_get']);
 
-        return new JsonResponse($data, Response::HTTP_OK, [], true);
+    #[Route('/api/rest/tenders/{id}', name: 'app_api_rest_tenders_get', requirements: ['id' => '\d+'], methods: ['GET'])]
+    public function getTenders(int $id): JsonResponse
+    {
+        try {
+            $tender = $this->tenderService->getTender($id);
+
+            if (!$tender) {
+                return $this->commonFunction->handleError('Tender not found',Response::HTTP_BAD_REQUEST);
+            }
+            return $this->createJsonResponse($tender);
+        } catch (Throwable $e) {
+            return  $this->commonFunction->handleError($e->getMessage());
+        }
     }
-    #[Route('/api/rest/tenders/', name: 'app_api_rest_tenders_post', methods: ['POST'],)]
-    public function addTenders(EntityManagerInterface $entityManager, SerializerInterface $serializer, Request $request): JsonResponse
+
+    #[Route('/api/rest/tenders/', name: 'app_api_rest_tenders_post', methods: ['POST'])]
+    public function addTenders(Request $request): JsonResponse
     {
-
         try {
-            $tender = $serializer->deserialize(
-                $request->getContent(),
-                'App\Entity\Tenders',
-                'json',
-                ['groups' => ['tender_write']]
-            );
-        } catch (\Exception $e) {
-            return $this->json(
-                ['error' => 'Invalid JSON data'],
-                Response::HTTP_BAD_REQUEST
-            );
-        }
+            $data = json_decode($request->getContent(), true);
 
-        $data = json_decode($request->getContent(), true);
-        if (isset($data['status'])) {
-            $status = $entityManager->getReference(Status::class, $data['status']);
-            $tender->setStatus($status);
-        }
-        try {
-            $entityManager->persist($tender);
-            $entityManager->flush();
-            $data = $serializer->serialize($tender, 'json', ['groups' => 'tender_get']);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                return  $this->commonFunction->handleError( 'Invalid JSON data');
+            }
+            $tender = $this->tenderService->createTender($data);
 
-            return new JsonResponse($data, Response::HTTP_CREATED, [], true);
-        }catch (\Exception $e) {
-            return new JsonResponse(
-                ['error' => 'Internal server error', 'exception' => $e->getMessage()],
-                Response::HTTP_INTERNAL_SERVER_ERROR
-            );
+            return $this->createJsonResponse($tender, Response::HTTP_CREATED);
+        } catch (\RuntimeException $e) {
+            return  $this->commonFunction->handleError($e->getMessage());
+        } catch (Throwable $e) {
+            return  $this->commonFunction->handleError($e->getMessage());
         }
+    }
+    private function createJsonResponse(
+        $data,
+        int $status = Response::HTTP_OK,
+        array $serializerGroups = ['groups' => 'tender_get']
+    ): JsonResponse {
+        $serialized = $this->serializer->serialize($data, 'json', $serializerGroups);
+        return new JsonResponse($serialized, $status, [], true);
     }
 }
